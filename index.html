@@ -71,6 +71,7 @@ padding:10px;
 flex:1;
 background:#111827;
 border:1px solid #1f2a38;
+color:white;
 }
 
 .card{
@@ -101,17 +102,14 @@ border-radius:6px;
 
 <body>
 
-<!-- LOGIN -->
 <div id="login">
 <div class="box">
 <h2>🇵🇸 Palestine Social</h2>
-
 <input id="name" placeholder="اسمك">
 <button onclick="enter()">دخول</button>
 </div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none">
 
 <header>🇵🇸 Palestine Social</header>
@@ -122,25 +120,17 @@ border-radius:6px;
 <button onclick="changeName()">تغيير الاسم</button>
 </div>
 
-<!-- POSTS -->
 <div id="posts">
-
 <input id="text" placeholder="اكتب منشور">
 <input type="file" id="file">
 <button onclick="addPost()">نشر</button>
-
 <div id="list"></div>
-
 </div>
 
-<!-- CHAT -->
 <div id="chat" style="display:none">
-
 <input id="msg" placeholder="رسالة">
 <button onclick="send()">إرسال</button>
-
 <div id="chatList"></div>
-
 </div>
 
 </div>
@@ -148,8 +138,6 @@ border-radius:6px;
 <script>
 
 let user="";
-let lastPostId=0;
-let lastMsgId=0;
 
 /* دخول */
 function enter(){
@@ -205,7 +193,8 @@ async function addPost(){
 let text=document.getElementById("text").value;
 let file=document.getElementById("file").files[0];
 
-if(!text || text.trim()===""){
+/* مهم: منع الفارغ هنا فقط (والسيرفر كمان يحمي) */
+if(!text && !file){
 alert("لا يمكن نشر منشور فارغ");
 return;
 }
@@ -265,15 +254,6 @@ document.getElementById("list").prepend(div);
 
 async function loadPosts(){
 let d=await fetch("/posts").then(r=>r.json());
-
-if(d.length>0){
-let last=d[d.length-1];
-if(last.id!==lastPostId){
-lastPostId=last.id;
-notify("📰 منشور جديد","تم نشر منشور جديد");
-}
-}
-
 document.getElementById("list").innerHTML="";
 d.forEach(renderPost);
 }
@@ -284,8 +264,8 @@ async function send(){
 
 let m=document.getElementById("msg").value;
 
-if(!m || m.trim()===""){
-alert("لا يمكن إرسال رسالة فارغة");
+if(!m){
+alert("رسالة فارغة");
 return;
 }
 
@@ -309,14 +289,6 @@ loadChat();
 async function loadChat(){
 let d=await fetch("/messages").then(r=>r.json());
 
-if(d.length>0){
-let last=d[d.length-1];
-if(last.id!==lastMsgId){
-lastMsgId=last.id;
-notify("💬 رسالة جديدة", last.user+": "+last.text);
-}
-}
-
 document.getElementById("chatList").innerHTML =
 d.map(m=>`
 <div class="card msg">
@@ -330,7 +302,6 @@ ${m.text}
 function init(){
 loadPosts();
 loadChat();
-
 setInterval(loadChat,3000);
 setInterval(loadPosts,5000);
 }
