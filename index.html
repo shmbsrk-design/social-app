@@ -1,39 +1,86 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Palestine Social</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فلسطين سوشيال 🇵🇸</title>
 
 <style>
-body{margin:0;font-family:sans-serif;background:#0a0f14;color:white}
-.card{background:#111827;margin:10px;padding:10px;border-radius:10px}
-input,button{padding:10px;margin:5px;border-radius:8px;border:none}
-button{background:#ce1126;color:white}
+body{
+margin:0;
+font-family:Arial;
+background:#0b0f14;
+color:white;
+}
+
+header{
+padding:12px;
+text-align:center;
+background:linear-gradient(90deg,#000,#006400,#ce1126);
+font-weight:bold;
+}
+
+.container{
+max-width:600px;
+margin:auto;
+padding:10px;
+}
+
+.card{
+background:#121826;
+padding:10px;
+margin:10px 0;
+border-radius:12px;
+}
+
+input,button{
+width:100%;
+padding:10px;
+margin:5px 0;
+border:none;
+border-radius:8px;
+font-size:14px;
+}
+
+button{
+background:#1f1f1f;
+color:white;
+cursor:pointer;
+}
+
+.small-btn{
+width:auto;
+padding:5px 10px;
+margin:3px;
+font-size:12px;
+display:inline-block;
+}
+
+.post-actions{
+margin-top:5px;
+}
 </style>
 </head>
 
 <body>
 
-<header style="padding:15px;background:#111;text-align:center">
-🇵🇸 Palestine Social
-<div id="me"></div>
-</header>
+<header>🇵🇸 فلسطين سوشيال PRO</header>
 
-<!-- LOGIN -->
-<div id="login">
+<div class="container">
+
+<!-- الاسم -->
 <input id="name" placeholder="ادخل اسمك">
-<button onclick="login()">دخول</button>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none">
-
-<input id="text" placeholder="منشور">
-<input type="file" id="file">
-<button onclick="post()">نشر</button>
+<button onclick="saveName()">حفظ الاسم</button>
 
 <hr>
 
+<!-- منشور -->
+<input id="text" placeholder="اكتب منشور">
+<input type="file" id="file">
+<button onclick="post()">نشر</button>
+
+<!-- الشات -->
+<h3>💬 الرسائل</h3>
 <input id="msg" placeholder="رسالة">
 <button onclick="send()">إرسال</button>
 
@@ -44,41 +91,15 @@ button{background:#ce1126;color:white}
 
 <script>
 
-let user = localStorage.getItem("user");
+let user = localStorage.getItem("user") || "زائر";
 
-/* ================= LOGIN ONCE ================= */
-function login(){
-
-let n=document.getElementById("name").value;
-if(!n) return;
-
-user=n;
+/* ===== حفظ الاسم ===== */
+function saveName(){
+user=document.getElementById("name").value;
 localStorage.setItem("user",user);
-
-start();
 }
 
-/* AUTO LOGIN */
-if(user){
-start();
-}
-
-/* ================= START ================= */
-function start(){
-
-document.getElementById("login").style.display="none";
-document.getElementById("app").style.display="block";
-
-document.getElementById("me").innerText="👤 "+user;
-
-loadPosts();
-loadChat();
-
-setInterval(loadPosts,4000);
-setInterval(loadChat,3000);
-}
-
-/* ================= POSTS ================= */
+/* ===== نشر ===== */
 function post(){
 
 let text=document.getElementById("text").value;
@@ -103,30 +124,65 @@ method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({user,text,file,type})
 }).then(()=>{
-
 document.getElementById("text").value="";
 document.getElementById("file").value="";
-
 loadPosts();
 });
 }
 
+/* ===== عرض المنشورات ===== */
 function loadPosts(){
-fetch("/posts").then(r=>r.json()).then(d=>{
-document.getElementById("posts").innerHTML=
-d.map(p=>`
-<div class="card">
-<b>${p.user}</b><br>
-${p.text}<br>
-<button>👍 ${p.likes}</button>
-<button>👎 ${p.dislikes}</button>
+
+fetch("/posts").then(r=>r.json()).then(data=>{
+
+document.getElementById("posts").innerHTML="";
+
+data.forEach(p=>{
+
+let div=document.createElement("div");
+div.className="card";
+
+div.innerHTML=`
+<b>👤 ${p.user} 🇵🇸</b><br>
+<p>${p.text||""}</p>
+
+${p.file ?
+`<video controls src="/uploads/${p.file}" style="width:100%;border-radius:10px"></video>`
+:""}
+
+<div class="post-actions">
+<button class="small-btn" onclick="like(${p.id})">👍 ${p.likes}</button>
+<button class="small-btn" onclick="dislike(${p.id})">👎 ${p.dislikes}</button>
 </div>
-`).join("");
+`;
+
+document.getElementById("posts").prepend(div);
+});
+
 });
 }
 
-/* ================= CHAT ================= */
+/* ===== لايك ===== */
+function like(id){
+fetch("/like",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({id})
+}).then(loadPosts);
+}
+
+/* ===== ديسلايك ===== */
+function dislike(id){
+fetch("/dislike",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({id})
+}).then(loadPosts);
+}
+
+/* ===== شات ===== */
 function send(){
+
 let text=document.getElementById("msg").value;
 
 fetch("/send",{
@@ -140,15 +196,22 @@ loadChat();
 }
 
 function loadChat(){
-fetch("/messages").then(r=>r.json()).then(d=>{
+fetch("/messages").then(r=>r.json()).then(data=>{
 document.getElementById("chat").innerHTML=
-d.map(m=>`
+data.map(m=>`
 <div class="card">
-<b>${m.user}</b>: ${m.text}
+<b>${m.user} 🇵🇸</b>: ${m.text}
 </div>
 `).join("");
 });
 }
+
+/* ===== تشغيل ===== */
+loadPosts();
+loadChat();
+
+setInterval(loadPosts,5000);
+setInterval(loadChat,3000);
 
 </script>
 
