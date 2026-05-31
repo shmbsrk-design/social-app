@@ -3,24 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Palestine Social PRO</title>
+<title>Palestine Social</title>
 
 <style>
-body{margin:0;font-family:sans-serif;background:#0a0f14;color:white}
-header{padding:15px;text-align:center;background:#111}
-.card{background:#111827;margin:10px;padding:10px;border-radius:10px}
-button{padding:6px;margin:3px}
-.online{color:#00ff99}
-input{padding:10px;margin:5px;width:90%}
+body{
+margin:0;
+font-family:sans-serif;
+background:#0a0f14;
+color:white;
+}
+
+header{
+text-align:center;
+padding:15px;
+background:linear-gradient(90deg,#000,#006400,#ce1126);
+font-weight:bold;
+}
+
+input,button{
+padding:10px;
+margin:5px;
+border-radius:10px;
+border:none;
+}
+
+button{
+background:#ce1126;
+color:white;
+cursor:pointer;
+}
+
+.card{
+background:#111827;
+margin:10px;
+padding:12px;
+border-radius:12px;
+border-left:4px solid #00c853;
+}
+
+.actions{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.small{
+padding:6px;
+font-size:12px;
+}
 </style>
 </head>
 
 <body>
 
-<header>
-🇵🇸 Palestine Social PRO
-<div id="online"></div>
-</header>
+<header>🇵🇸 Palestine Social PRO</header>
 
 <input id="text" placeholder="اكتب منشور">
 <input type="file" id="file">
@@ -31,90 +67,66 @@ input{padding:10px;margin:5px;width:90%}
 <script>
 
 let user = prompt("اسمك");
-let lastPost = 0;
 
-/* ONLINE */
+/* ================= SMART STATE ================= */
+let postsCache = new Map();
+
+/* ================= ONLINE UPDATE (خفيف) ================= */
 setInterval(()=>{
-fetch("/online",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({user})
-});
+fetch("/online",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user})});
+},4000);
 
-fetch("/online")
-.then(r=>r.json())
-.then(d=>{
-document.getElementById("online").innerHTML =
-"🟢 Online: " + d.join(", ");
-});
-},3000);
-
-/* ================= POSTS ================= */
-
+/* ================= POST ================= */
 function post(){
 
-let text = document.getElementById("text");
-let file = document.getElementById("file");
+let text=document.getElementById("text").value;
+let file=document.getElementById("file").files[0];
 
-let formText = text.value;
-let formFile = file.files[0];
-
-let f=null,t=null;
-
-/* رفع الملف إذا موجود */
-if(formFile){
-let fd = new FormData();
-fd.append("file",formFile);
+if(file){
+let fd=new FormData();
+fd.append("file",file);
 
 fetch("/upload",{method:"POST",body:fd})
 .then(r=>r.json())
 .then(d=>{
-f=d.file;
-t=d.type;
-
-sendPost(formText,f,t);
+sendPost(text,d.file,d.type);
 });
 }else{
-sendPost(formText,null,null);
+sendPost(text,null,null);
 }
 }
 
-/* إرسال المنشور */
 function sendPost(text,file,type){
 
 fetch("/post",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({user,text,file,type})
-}).then(()=>{
-
-/* ✨ تصفير الحقول بعد النشر */
-document.getElementById("text").value = "";
-document.getElementById("file").value = "";
-
-load();
-
+}).then(r=>r.json())
+.then(res=>{
+if(res.ok){
+document.getElementById("text").value="";
+document.getElementById("file").value="";
+addPostToUI(res.post);
+}
 });
 }
 
-/* ================= LOAD POSTS ================= */
+/* ================= ADD ONLY NEW POST ================= */
+function addPostToUI(p){
 
-function load(){
+if(postsCache.has(p.id)) return;
 
-fetch("/posts")
-.then(r=>r.json())
-.then(d=>{
-
-document.getElementById("list").innerHTML="";
-
-d.forEach(p=>{
+postsCache.set(p.id,p);
 
 let div=document.createElement("div");
 div.className="card";
 
+div.id="post-"+p.id;
+
 div.innerHTML=`
-<b>${p.user}</b><br>
-${p.text||""}<br>
+<b>${p.user}</b>
+<p>${p.text||""}</p>
 
 ${p.file ?
 (p.type && p.type.includes("image") ?
@@ -125,45 +137,68 @@ ${p.file ?
 :""
 }
 
-<br>
+<div class="actions">
 
 <button onclick="like(${p.id})">👍 ${p.likes}</button>
 <button onclick="dislike(${p.id})">👎 ${p.dislikes}</button>
-<button onclick="del(${p.id})">🗑 حذف</button>
+<button onclick="del(${p.id})">🗑</button>
+
+</div>
 `;
 
 document.getElementById("list").prepend(div);
+}
 
+/* ================= LOAD ONCE ONLY ================= */
+function load(){
+
+fetch("/posts").then(r=>r.json()).then(data=>{
+
+data.forEach(p=>{
+if(!postsCache.has(p.id)){
+addPostToUI(p);
+}
 });
+
 });
 }
 
 /* ================= ACTIONS ================= */
-
 function like(id){
 fetch("/like",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,user})})
-.then(load);
+.then(()=>refreshPost(id));
 }
 
 function dislike(id){
 fetch("/dislike",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,user})})
-.then(load);
+.then(()=>refreshPost(id));
 }
 
 function del(id){
 let pass = prompt("كلمة السر");
 fetch("/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,pass})})
-.then(load);
+.then(()=>{
+let el=document.getElementById("post-"+id);
+if(el) el.remove();
+postsCache.delete(id);
+});
 }
 
-/* INIT */
+/* ================= UPDATE ONLY ONE POST ================= */
+function refreshPost(id){
+fetch("/posts").then(r=>r.json()).then(data=>{
+let p=data.find(x=>x.id===id);
+if(!p) return;
+
+let el=document.getElementById("post-"+id);
+if(el){
+el.querySelector("button").innerHTML="👍 "+p.likes;
+}
+});
+}
+
+/* ================= INIT ================= */
 load();
-setInterval(load,3000);
-
-/* NOTIFICATIONS */
-if("Notification" in window){
-Notification.requestPermission();
-}
 
 </script>
 
