@@ -1,1 +1,287 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
 
+body {
+    background: #f5f5f5;
+    color: #222;
+    padding-bottom: 70px;
+}
+
+.top-bar {
+    background: linear-gradient(
+        90deg,
+        #000000,
+        #ce1126,
+        #009736
+    );
+    color: white;
+    text-align: center;
+    padding: 15px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.top-bar h1 {
+    margin-bottom: 5px;
+}
+
+.page {
+    display: none;
+    padding: 10px;
+}
+
+.page.active {
+    display: block;
+}
+
+.post-create {
+    background: white;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.post-create textarea {
+    width: 100%;
+    min-height: 100px;
+    resize: none;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.post-create input[type=file] {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.post-create button {
+    width: 100%;
+    margin-top: 10px;
+    border: none;
+    background: #009736;
+    color: white;
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.post {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    display: flex;
+}
+
+.post-border {
+    width: 8px;
+    background: #ce1126;
+}
+
+.post-content {
+    flex: 1;
+    padding: 12px;
+}
+
+.post-author {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.post-text {
+    margin-bottom: 10px;
+    word-wrap: break-word;
+}
+
+.post-media {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.post-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.post-actions button {
+    border: none;
+    background: #eee;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.comment-box {
+    margin-top: 10px;
+}
+
+.comment-box input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.comment-box button {
+    margin-top: 5px;
+    width: 100%;
+    background: #009736;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.comment {
+    background: #f3f3f3;
+    padding: 8px;
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+#messagesContainer {
+    height: calc(100vh - 220px);
+    overflow-y: auto;
+    padding-bottom: 10px;
+}
+
+.message {
+    background: white;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.message-author {
+    font-weight: bold;
+    color: #009736;
+}
+
+.chat-input {
+    position: fixed;
+    bottom: 70px;
+    right: 0;
+    left: 0;
+    background: white;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.chat-input input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.chat-input button {
+    border: none;
+    background: #009736;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.card input[type=text],
+.card input:not([type]) {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+#settingsPage button {
+    width: 100%;
+    border: none;
+    background: #009736;
+    color: white;
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.notification {
+    background: white;
+    border-right: 5px solid #ce1126;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    background: white;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid #ddd;
+    z-index: 999;
+}
+
+.bottom-nav button {
+    border: none;
+    background: white;
+    padding: 15px 5px;
+    font-size: 14px;
+}
+
+.bottom-nav button:hover {
+    background: #f0f0f0;
+}
+
+.dialog {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.dialog-content {
+    background: white;
+    width: 90%;
+    max-width: 350px;
+    padding: 20px;
+    border-radius: 15px;
+}
+
+.dialog-content h2 {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.dialog-content input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.dialog-content button {
+    width: 100%;
+    margin-top: 10px;
+    background: #009736;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+  }
