@@ -2,36 +2,45 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const path = require("path");
 const multer = require("multer");
 const fs = require("fs");
-const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+const io = new Server(server, {
+  cors: {
+    origin: "*"
+  }
+});
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
-app.use("/uploads", express.static("uploads"));
+app.use(express.urlencoded({ extended: true }));
 
-const DATA_FILE = "data.json";
-
-/* ---------- Helpers ---------- */
-function loadData() {
-  if (!fs.existsSync(DATA_FILE)) {
-    return { posts: [], messages: [], users: [] };
-  }
-  return JSON.parse(fs.readFileSync(DATA_FILE));
+// إنشاء مجلد الرفع تلقائياً
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
 }
 
-function saveData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(express.static(path.join(__dirname, "public")));
 
-/* ---------- Uploads ---------- */
+// قاعدة بيانات مؤقتة بالذاكرة
+let posts = [];
+let messages = [];
+let notifications = [];
+let settings = {
+  notificationsEnabled: true
+};
+
+// رفع الملفات
 const storage = multer.diskStorage({
-  destination: "uploads/",
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
   }
@@ -39,83 +48,160 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* ---------- API: Posts ---------- */
+/* ===========================
+   POSTS
+=========================== */
 
-// Get posts
 app.get("/api/posts", (req, res) => {
-  const data = loadData();
-  res.json(data.posts);
+  res.json(posts);
 });
 
-// Create post
-app.post("/api/posts", upload.single("media"), (req, res) => {
-  const data = loadData();
+app.post("/api/posts", upload.single("file"), (req, res) => {
+  const { author, text } = req.body;
 
-  const newPost = {
-    id: Date.now(),
-    text: req.body.text || "",
-    media: req.file ? "/uploads/" + req.file.filename : null,
+  const post = {
+    id: uuidv4(),
+    author,
+    text,
+    file: req.file ? "/uploads/" + req.file.filename : null,
     likes: 0,
     dislikes: 0,
     comments: [],
-    createdAt: new Date()
+    createdAt: Date.now()
   };
 
-  data.posts.unshift(newPost);
-  saveData(data);
+  posts.unshift(post);
 
-  res.json(newPost);
-});
+  addNotification(`تم نشر منشور بواسطة ${author}`);
 
-// Like / Dislike
-app.post("/api/posts/react", (req, res) => {
-  const { postId, type } = req.body;
-
-  const data = loadData();
-  const post = data.posts.find(p => p.id === postId);
-
-  if (post) {
-    if (type === "like") post.likes++;
-    if (type === "dislike") post.dislikes++;
-  }
-
-  saveData(data);
   res.json(post);
 });
 
-// Comment
-app.post("/api/posts/comment", (req, res) => {
-  const { postId, text } = req.body;
+app.post("/api/posts/:id/like", (req, res) => {
+  const post = posts.find(p => p.id === req.params.id);
 
-  const data = loadData();
-  const post = data.posts.find(p => p.id === postId);
-
-  if (post) {
-    post.comments.push({
-      text,
-      time: new Date()
-    });
+  if (!post) {
+    return res.status(404).json({ error: "Post not found" });
   }
 
-  saveData(data);
+  post.likes++;
   res.json(post);
 });
 
-/* ---------- Chat (Socket.IO) ---------- */
-io.on("connection", (socket) => {
+app.post("/api/posts/:id/dislike", (req, res) => {
+  const post = posts.find(p => p.id === req.params.id);
+
+  if (!post) {
+    return res.status(404).json({ error: "Post not found" });
+  }
+
+  post.dislikes++;
+  res.json(post);
+});
+
+app.post("/api/posts/:id/comment", (req, res) => {
+  const post = posts.find(p => p.id === req.params.id);
+
+  if (!post) {
+    return res.status(404).json({ error: "Post not found" });
+  }
+
+  post.comments.push({
+    author: req.body.author,
+    text: req.body.text
+  });
+
+  res.json(post);
+});
+
+/* ===========================
+   MESSAGES
+=========================== */
+
+app.get("/api/messages", (req, res) => {
+  res.json(messages);
+});
+
+app.post("/api/messages", (req, res) => {
+  const msg = {
+    id: uuidv4(),
+    author: req.body.author,
+    text: req.body.text,
+    createdAt: Date.now()
+  };
+
+  messages.push(msg);
+
+  addNotification(`تم إرسال رسالة بواسطة ${msg.author}`);
+
+  io.emit("new-message", msg);
+
+  res.json(msg);
+});
+
+/* ===========================
+   NOTIFICATIONS
+=========================== */
+
+function addNotification(text) {
+  notifications.unshift({
+    id: uuidv4(),
+    text,
+    createdAt: Date.now()
+  });
+
+  if (notifications.length > 10) {
+    notifications = notifications.slice(0, 10);
+  }
+
+  io.emit("notifications-update", notifications);
+}
+
+app.get("/api/notifications", (req, res) => {
+  res.json(notifications);
+});
+
+/* ===========================
+   SETTINGS
+=========================== */
+
+app.get("/api/settings", (req, res) => {
+  res.json(settings);
+});
+
+app.post("/api/settings", (req, res) => {
+  settings.notificationsEnabled =
+    req.body.notificationsEnabled;
+
+  res.json(settings);
+});
+
+/* ===========================
+   SOCKET
+=========================== */
+
+io.on("connection", socket => {
   console.log("User connected");
 
-  socket.on("send_message", (msg) => {
-    const data = loadData();
-
-    data.messages.push(msg);
-    saveData(data);
-
-    io.emit("receive_message", msg);
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
   });
 });
 
-/* ---------- Start Server ---------- */
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+/* ===========================
+   INDEX
+=========================== */
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+/* ===========================
+   START
+=========================== */
+
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
