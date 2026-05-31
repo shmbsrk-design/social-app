@@ -2,81 +2,83 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Palestine Social</title>
 
 <style>
-body{
-margin:0;
-font-family:sans-serif;
-background:#0a0f14;
-color:white;
-}
-
-header{
-text-align:center;
-padding:15px;
-background:linear-gradient(90deg,#000,#006400,#ce1126);
-font-weight:bold;
-}
-
-input,button{
-padding:10px;
-margin:5px;
-border-radius:10px;
-border:none;
-}
-
-button{
-background:#ce1126;
-color:white;
-cursor:pointer;
-}
-
-.card{
-background:#111827;
-margin:10px;
-padding:12px;
-border-radius:12px;
-border-left:4px solid #00c853;
-}
-
-.actions{
-display:flex;
-gap:10px;
-margin-top:10px;
-}
-
-.small{
-padding:6px;
-font-size:12px;
-}
+body{margin:0;font-family:sans-serif;background:#0a0f14;color:white}
+.card{background:#111827;margin:10px;padding:10px;border-radius:10px}
+input,button{padding:10px;margin:5px;border-radius:8px;border:none}
+button{background:#ce1126;color:white}
 </style>
 </head>
 
 <body>
 
-<header>🇵🇸 Palestine Social PRO</header>
+<header style="padding:15px;background:#111;text-align:center">
+🇵🇸 Palestine Social
+<div id="me"></div>
+</header>
 
-<input id="text" placeholder="اكتب منشور">
+<!-- LOGIN -->
+<div id="login">
+<input id="name" placeholder="ادخل اسمك">
+<button onclick="login()">دخول</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+<input id="text" placeholder="منشور">
 <input type="file" id="file">
 <button onclick="post()">نشر</button>
 
-<div id="list"></div>
+<hr>
+
+<input id="msg" placeholder="رسالة">
+<button onclick="send()">إرسال</button>
+
+<div id="chat"></div>
+<div id="posts"></div>
+
+</div>
 
 <script>
 
-let user = prompt("اسمك");
+let user = localStorage.getItem("user");
 
-/* ================= SMART STATE ================= */
-let postsCache = new Map();
+/* ================= LOGIN ONCE ================= */
+function login(){
 
-/* ================= ONLINE UPDATE (خفيف) ================= */
-setInterval(()=>{
-fetch("/online",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user})});
-},4000);
+let n=document.getElementById("name").value;
+if(!n) return;
 
-/* ================= POST ================= */
+user=n;
+localStorage.setItem("user",user);
+
+start();
+}
+
+/* AUTO LOGIN */
+if(user){
+start();
+}
+
+/* ================= START ================= */
+function start(){
+
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";
+
+document.getElementById("me").innerText="👤 "+user;
+
+loadPosts();
+loadChat();
+
+setInterval(loadPosts,4000);
+setInterval(loadChat,3000);
+}
+
+/* ================= POSTS ================= */
 function post(){
 
 let text=document.getElementById("text").value;
@@ -91,9 +93,7 @@ fetch("/upload",{method:"POST",body:fd})
 .then(d=>{
 sendPost(text,d.file,d.type);
 });
-}else{
-sendPost(text,null,null);
-}
+}else sendPost(text,null,null);
 }
 
 function sendPost(text,file,type){
@@ -102,103 +102,53 @@ fetch("/post",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({user,text,file,type})
-}).then(r=>r.json())
-.then(res=>{
-if(res.ok){
+}).then(()=>{
+
 document.getElementById("text").value="";
 document.getElementById("file").value="";
-addPostToUI(res.post);
-}
+
+loadPosts();
 });
 }
 
-/* ================= ADD ONLY NEW POST ================= */
-function addPostToUI(p){
-
-if(postsCache.has(p.id)) return;
-
-postsCache.set(p.id,p);
-
-let div=document.createElement("div");
-div.className="card";
-
-div.id="post-"+p.id;
-
-div.innerHTML=`
-<b>${p.user}</b>
-<p>${p.text||""}</p>
-
-${p.file ?
-(p.type && p.type.includes("image") ?
-`<img src="/uploads/${p.file}" style="width:100%">`
-:
-`<video controls src="/uploads/${p.file}" style="width:100%"></video>`
-)
-:""
-}
-
-<div class="actions">
-
-<button onclick="like(${p.id})">👍 ${p.likes}</button>
-<button onclick="dislike(${p.id})">👎 ${p.dislikes}</button>
-<button onclick="del(${p.id})">🗑</button>
-
+function loadPosts(){
+fetch("/posts").then(r=>r.json()).then(d=>{
+document.getElementById("posts").innerHTML=
+d.map(p=>`
+<div class="card">
+<b>${p.user}</b><br>
+${p.text}<br>
+<button>👍 ${p.likes}</button>
+<button>👎 ${p.dislikes}</button>
 </div>
-`;
-
-document.getElementById("list").prepend(div);
-}
-
-/* ================= LOAD ONCE ONLY ================= */
-function load(){
-
-fetch("/posts").then(r=>r.json()).then(data=>{
-
-data.forEach(p=>{
-if(!postsCache.has(p.id)){
-addPostToUI(p);
-}
-});
-
+`).join("");
 });
 }
 
-/* ================= ACTIONS ================= */
-function like(id){
-fetch("/like",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,user})})
-.then(()=>refreshPost(id));
-}
+/* ================= CHAT ================= */
+function send(){
+let text=document.getElementById("msg").value;
 
-function dislike(id){
-fetch("/dislike",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,user})})
-.then(()=>refreshPost(id));
-}
-
-function del(id){
-let pass = prompt("كلمة السر");
-fetch("/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,pass})})
-.then(()=>{
-let el=document.getElementById("post-"+id);
-if(el) el.remove();
-postsCache.delete(id);
+fetch("/send",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({user,text})
+}).then(()=>{
+document.getElementById("msg").value="";
+loadChat();
 });
 }
 
-/* ================= UPDATE ONLY ONE POST ================= */
-function refreshPost(id){
-fetch("/posts").then(r=>r.json()).then(data=>{
-let p=data.find(x=>x.id===id);
-if(!p) return;
-
-let el=document.getElementById("post-"+id);
-if(el){
-el.querySelector("button").innerHTML="👍 "+p.likes;
-}
+function loadChat(){
+fetch("/messages").then(r=>r.json()).then(d=>{
+document.getElementById("chat").innerHTML=
+d.map(m=>`
+<div class="card">
+<b>${m.user}</b>: ${m.text}
+</div>
+`).join("");
 });
 }
-
-/* ================= INIT ================= */
-load();
 
 </script>
 
