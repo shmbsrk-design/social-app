@@ -3,217 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>فلسطين سوشيال 🇵🇸</title>
 
-<style>
-body{
-margin:0;
-font-family:Arial;
-background:#0b0f14;
-color:white;
-}
+<title>Gaza Social</title>
 
-header{
-padding:12px;
-text-align:center;
-background:linear-gradient(90deg,#000,#006400,#ce1126);
-font-weight:bold;
-}
+<link rel="stylesheet" href="style.css">
 
-.container{
-max-width:600px;
-margin:auto;
-padding:10px;
-}
+<script src="/socket.io/socket.io.js"></script>
 
-.card{
-background:#121826;
-padding:10px;
-margin:10px 0;
-border-radius:12px;
-}
-
-input,button{
-width:100%;
-padding:10px;
-margin:5px 0;
-border:none;
-border-radius:8px;
-font-size:14px;
-}
-
-button{
-background:#1f1f1f;
-color:white;
-cursor:pointer;
-}
-
-.small-btn{
-width:auto;
-padding:5px 10px;
-margin:3px;
-font-size:12px;
-display:inline-block;
-}
-
-.post-actions{
-margin-top:5px;
-}
-</style>
 </head>
-
 <body>
 
-<header>🇵🇸 فلسطين سوشيال PRO</header>
+<div id="nameDialog" class="dialog">
+    <div class="dialog-content">
+        <h2>مرحباً بك</h2>
 
-<div class="container">
+        <input
+            id="usernameInput"
+            placeholder="اكتب اسمك"
+        >
 
-<!-- الاسم -->
-<input id="name" placeholder="ادخل اسمك">
-<button onclick="saveName()">حفظ الاسم</button>
-
-<hr>
-
-<!-- منشور -->
-<input id="text" placeholder="اكتب منشور">
-<input type="file" id="file">
-<button onclick="post()">نشر</button>
-
-<!-- الشات -->
-<h3>💬 الرسائل</h3>
-<input id="msg" placeholder="رسالة">
-<button onclick="send()">إرسال</button>
-
-<div id="chat"></div>
-<div id="posts"></div>
-
+        <button onclick="saveUsername()">
+            دخول
+        </button>
+    </div>
 </div>
 
-<script>
+<header class="top-bar">
+    <h1>🇵🇸 Gaza Social</h1>
+    <small>Developed by Mbark Abo Obyda</small>
+</header>
 
-let user = localStorage.getItem("user") || "زائر";
+<!-- المنشورات -->
 
-/* ===== حفظ الاسم ===== */
-function saveName(){
-user=document.getElementById("name").value;
-localStorage.setItem("user",user);
-}
+<section id="postsPage" class="page active">
 
-/* ===== نشر ===== */
-function post(){
+    <div class="post-create">
 
-let text=document.getElementById("text").value;
-let file=document.getElementById("file").files[0];
+        <textarea
+            id="postText"
+            placeholder="ماذا يدور في ذهنك؟">
+        </textarea>
 
-if(file){
-let fd=new FormData();
-fd.append("file",file);
+        <input
+            type="file"
+            id="postFile"
+        >
 
-fetch("/upload",{method:"POST",body:fd})
-.then(r=>r.json())
-.then(d=>{
-sendPost(text,d.file,d.type);
-});
-}else sendPost(text,null,null);
-}
+        <button onclick="createPost()">
+            نشر
+        </button>
 
-function sendPost(text,file,type){
+    </div>
 
-fetch("/post",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({user,text,file,type})
-}).then(()=>{
-document.getElementById("text").value="";
-document.getElementById("file").value="";
-loadPosts();
-});
-}
+    <div id="postsContainer"></div>
 
-/* ===== عرض المنشورات ===== */
-function loadPosts(){
+</section>
 
-fetch("/posts").then(r=>r.json()).then(data=>{
+<!-- الرسائل -->
 
-document.getElementById("posts").innerHTML="";
+<section id="messagesPage" class="page">
 
-data.forEach(p=>{
+    <div id="messagesContainer"></div>
 
-let div=document.createElement("div");
-div.className="card";
+    <div class="chat-input">
 
-div.innerHTML=`
-<b>👤 ${p.user} 🇵🇸</b><br>
-<p>${p.text||""}</p>
+        <input
+            id="messageInput"
+            placeholder="اكتب رسالة..."
+        >
 
-${p.file ?
-`<video controls src="/uploads/${p.file}" style="width:100%;border-radius:10px"></video>`
-:""}
+        <button onclick="sendMessage()">
+            إرسال
+        </button>
 
-<div class="post-actions">
-<button class="small-btn" onclick="like(${p.id})">👍 ${p.likes}</button>
-<button class="small-btn" onclick="dislike(${p.id})">👎 ${p.dislikes}</button>
-</div>
-`;
+    </div>
 
-document.getElementById("posts").prepend(div);
-});
+</section>
 
-});
-}
+<!-- الإعدادات -->
 
-/* ===== لايك ===== */
-function like(id){
-fetch("/like",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id})
-}).then(loadPosts);
-}
+<section id="settingsPage" class="page">
 
-/* ===== ديسلايك ===== */
-function dislike(id){
-fetch("/dislike",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id})
-}).then(loadPosts);
-}
+    <div class="card">
 
-/* ===== شات ===== */
-function send(){
+        <h3>الاسم</h3>
 
-let text=document.getElementById("msg").value;
+        <input
+            id="settingsName"
+            placeholder="الاسم"
+        >
 
-fetch("/send",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({user,text})
-}).then(()=>{
-document.getElementById("msg").value="";
-loadChat();
-});
-}
+    </div>
 
-function loadChat(){
-fetch("/messages").then(r=>r.json()).then(data=>{
-document.getElementById("chat").innerHTML=
-data.map(m=>`
-<div class="card">
-<b>${m.user} 🇵🇸</b>: ${m.text}
-</div>
-`).join("");
-});
-}
+    <div class="card">
 
-/* ===== تشغيل ===== */
-loadPosts();
-loadChat();
+        <label>
 
-setInterval(loadPosts,5000);
-setInterval(loadChat,3000);
+            <input
+                type="checkbox"
+                id="notificationToggle"
+                checked
+            >
 
-</script>
+            تفعيل الإشعارات
+
+        </label>
+
+    </div>
+
+    <button onclick="saveSettings()">
+        حفظ
+    </button>
+
+</section>
+
+<!-- الإشعارات -->
+
+<section id="notificationsPage" class="page">
+
+    <div id="notificationsContainer"></div>
+
+</section>
+
+<nav class="bottom-nav">
+
+    <button onclick="showPage('postsPage')">
+        المنشورات
+    </button>
+
+    <button onclick="showPage('messagesPage')">
+        الرسائل
+    </button>
+
+    <button onclick="showPage('settingsPage')">
+        الإعدادات
+    </button>
+
+    <button onclick="showPage('notificationsPage')">
+        الإشعارات
+    </button>
+
+</nav>
+
+<script src="app.js"></script>
 
 </body>
 </html>
