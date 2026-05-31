@@ -1,130 +1,121 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-/* ===== FILES ===== */
-const UPLOADS = path.join(__dirname,"uploads");
-const DATA_FILE = path.join(__dirname,"data.json");
-
-if(!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS);
-
+app.use(cors());
 app.use(express.json());
-app.use("/uploads",express.static(UPLOADS));
+app.use(express.static("public"));
+app.use("/uploads", express.static("uploads"));
 
-const upload = multer({ dest: UPLOADS });
+const DATA_FILE = "data.json";
 
-const ADMIN_PASS = "mbark#7171124";
-
-/* ===== LOAD/SAVE ===== */
-function loadData(){
-if(!fs.existsSync(DATA_FILE)){
-return {posts:[],messages:[],users:[]};
-}
-return JSON.parse(fs.readFileSync(DATA_FILE));
-}
-
-function saveData(data){
-fs.writeFileSync(DATA_FILE,JSON.stringify(data,null,2));
+/* ---------- Helpers ---------- */
+function loadData() {
+  if (!fs.existsSync(DATA_FILE)) {
+    return { posts: [], messages: [], users: [] };
+  }
+  return JSON.parse(fs.readFileSync(DATA_FILE));
 }
 
-let DB = loadData();
-
-/* ===== HOME ===== */
-app.get("/",(req,res)=>{
-res.sendFile(path.join(__dirname,"index.html"));
-});
-
-/* ===== LOGIN (اسم فقط) ===== */
-app.post("/login",(req,res)=>{
-res.json({ok:true});
-});
-
-/* ===== POSTS ===== */
-app.post("/post",(req,res)=>{
-
-const {user,text,file,type} = req.body;
-
-if((!text || text.trim()==="") && !file){
-return res.json({ok:false,error:"لا يمكن نشر منشور فارغ"});
+function saveData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-let post = {
-id: Date.now(),
-user,
-text: text || "",
-file: file || null,
-type: type || null,
-likes: 0,
-dislikes: 0
-};
-
-DB.posts.push(post);
-saveData(DB);
-
-res.json({ok:true});
+/* ---------- Uploads ---------- */
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
 });
 
-app.get("/posts",(req,res)=>{
-res.json(DB.posts);
+const upload = multer({ storage });
+
+/* ---------- API: Posts ---------- */
+
+// Get posts
+app.get("/api/posts", (req, res) => {
+  const data = loadData();
+  res.json(data.posts);
 });
 
-/* ===== LIKE ===== */
-app.post("/like",(req,res)=>{
-let p = DB.posts.find(x=>x.id==req.body.id);
-if(!p) return res.json({ok:false});
+// Create post
+app.post("/api/posts", upload.single("media"), (req, res) => {
+  const data = loadData();
 
-p.likes++;
-saveData(DB);
+  const newPost = {
+    id: Date.now(),
+    text: req.body.text || "",
+    media: req.file ? "/uploads/" + req.file.filename : null,
+    likes: 0,
+    dislikes: 0,
+    comments: [],
+    createdAt: new Date()
+  };
 
-res.json({ok:true});
+  data.posts.unshift(newPost);
+  saveData(data);
+
+  res.json(newPost);
 });
 
-/* ===== DISLIKE ===== */
-app.post("/dislike",(req,res)=>{
-let p = DB.posts.find(x=>x.id==req.body.id);
-if(!p) return res.json({ok:false});
+// Like / Dislike
+app.post("/api/posts/react", (req, res) => {
+  const { postId, type } = req.body;
 
-p.dislikes++;
-saveData(DB);
+  const data = loadData();
+  const post = data.posts.find(p => p.id === postId);
 
-res.json({ok:true});
+  if (post) {
+    if (type === "like") post.likes++;
+    if (type === "dislike") post.dislikes++;
+  }
+
+  saveData(data);
+  res.json(post);
 });
 
-/* ===== CHAT ===== */
-app.post("/send",(req,res)=>{
+// Comment
+app.post("/api/posts/comment", (req, res) => {
+  const { postId, text } = req.body;
 
-const {user,text} = req.body;
+  const data = loadData();
+  const post = data.posts.find(p => p.id === postId);
 
-if(!text || text.trim()===""){
-return res.json({ok:false});
-}
+  if (post) {
+    post.comments.push({
+      text,
+      time: new Date()
+    });
+  }
 
-DB.messages.push({
-id:Date.now(),
-user,
-text
+  saveData(data);
+  res.json(post);
 });
 
-saveData(DB);
+/* ---------- Chat (Socket.IO) ---------- */
+io.on("connection", (socket) => {
+  console.log("User connected");
 
-res.json({ok:true});
+  socket.on("send_message", (msg) => {
+    const data = loadData();
+
+    data.messages.push(msg);
+    saveData(data);
+
+    io.emit("receive_message", msg);
+  });
 });
 
-app.get("/messages",(req,res)=>{
-res.json(DB.messages);
+/* ---------- Start Server ---------- */
+server.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
 });
-
-/* ===== UPLOAD ===== */
-app.post("/upload",upload.single("file"),(req,res)=>{
-res.json({
-file:req.file.filename,
-type:req.file.mimetype
-});
-});
-
-/* ===== START ===== */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT,()=>console.log("🇵🇸 RUNNING "+PORT));
