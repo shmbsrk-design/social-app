@@ -5,11 +5,11 @@ const path = require("path");
 
 const app = express();
 
-/* ================= FILES ================= */
+/* ===== FILES ===== */
 const UPLOADS = path.join(__dirname,"uploads");
-if(!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS);
-
 const DATA_FILE = path.join(__dirname,"data.json");
+
+if(!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS);
 
 app.use(express.json());
 app.use("/uploads",express.static(UPLOADS));
@@ -18,117 +18,106 @@ const upload = multer({ dest: UPLOADS });
 
 const ADMIN_PASS = "mbark#7171124";
 
-/* ================= LOAD DATA ================= */
-function load(){
+/* ===== LOAD/SAVE ===== */
+function loadData(){
 if(!fs.existsSync(DATA_FILE)){
-return {posts:[],messages:[]};
+return {posts:[],messages:[],users:[]};
 }
 return JSON.parse(fs.readFileSync(DATA_FILE));
 }
 
-function save(data){
+function saveData(data){
 fs.writeFileSync(DATA_FILE,JSON.stringify(data,null,2));
 }
 
-/* ================= DATA ================= */
-let DATA = load();
+let DB = loadData();
 
-/* ================= HOME ================= */
+/* ===== HOME ===== */
 app.get("/",(req,res)=>{
 res.sendFile(path.join(__dirname,"index.html"));
 });
 
-/* ================= LOGIN SAVE ================= */
+/* ===== LOGIN (اسم فقط) ===== */
 app.post("/login",(req,res)=>{
 res.json({ok:true});
 });
 
-/* ================= POSTS ================= */
+/* ===== POSTS ===== */
 app.post("/post",(req,res)=>{
 
-const {user,text,file,type}=req.body;
+const {user,text,file,type} = req.body;
 
-if((!text||text.trim()==="") && !file){
-return res.json({ok:false});
+if((!text || text.trim()==="") && !file){
+return res.json({ok:false,error:"لا يمكن نشر منشور فارغ"});
 }
 
-let post={
-id:Date.now(),
+let post = {
+id: Date.now(),
 user,
-text:text||"",
-file:file||null,
-type:type||null,
-likes:0,
-dislikes:0
+text: text || "",
+file: file || null,
+type: type || null,
+likes: 0,
+dislikes: 0
 };
 
-DATA.posts.push(post);
-save(DATA);
+DB.posts.push(post);
+saveData(DB);
 
-res.json({ok:true,post});
+res.json({ok:true});
 });
 
 app.get("/posts",(req,res)=>{
-res.json(DATA.posts);
+res.json(DB.posts);
 });
 
-/* ================= CHAT ================= */
+/* ===== LIKE ===== */
+app.post("/like",(req,res)=>{
+let p = DB.posts.find(x=>x.id==req.body.id);
+if(!p) return res.json({ok:false});
+
+p.likes++;
+saveData(DB);
+
+res.json({ok:true});
+});
+
+/* ===== DISLIKE ===== */
+app.post("/dislike",(req,res)=>{
+let p = DB.posts.find(x=>x.id==req.body.id);
+if(!p) return res.json({ok:false});
+
+p.dislikes++;
+saveData(DB);
+
+res.json({ok:true});
+});
+
+/* ===== CHAT ===== */
 app.post("/send",(req,res)=>{
 
-const {user,text}=req.body;
+const {user,text} = req.body;
 
-if(!text||text.trim()===""){
+if(!text || text.trim()===""){
 return res.json({ok:false});
 }
 
-DATA.messages.push({
+DB.messages.push({
 id:Date.now(),
 user,
 text
 });
 
-save(DATA);
+saveData(DB);
 
 res.json({ok:true});
 });
 
 app.get("/messages",(req,res)=>{
-res.json(DATA.messages);
+res.json(DB.messages);
 });
 
-/* ================= LIKE ================= */
-app.post("/like",(req,res)=>{
-let p=DATA.posts.find(x=>x.id==req.body.id);
-if(!p) return res.json({ok:false});
-
-p.likes++;
-save(DATA);
-res.json({ok:true});
-});
-
-/* ================= DISLIKE ================= */
-app.post("/dislike",(req,res)=>{
-let p=DATA.posts.find(x=>x.id==req.body.id);
-if(!p) return res.json({ok:false});
-
-p.dislikes++;
-save(DATA);
-res.json({ok:true});
-});
-
-/* ================= DELETE ================= */
-app.post("/delete",(req,res)=>{
-if(req.body.pass!==ADMIN_PASS){
-return res.json({ok:false});
-}
-
-DATA.posts = DATA.posts.filter(p=>p.id!=req.body.id);
-save(DATA);
-
-res.json({ok:true});
-});
-
-/* ================= UPLOAD ================= */
+/* ===== UPLOAD ===== */
 app.post("/upload",upload.single("file"),(req,res)=>{
 res.json({
 file:req.file.filename,
@@ -136,6 +125,6 @@ type:req.file.mimetype
 });
 });
 
-/* ================= START ================= */
+/* ===== START ===== */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT,()=>console.log("🔥 RUN "+PORT));
+app.listen(PORT,()=>console.log("🇵🇸 RUNNING "+PORT));
