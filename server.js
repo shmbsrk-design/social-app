@@ -5,56 +5,22 @@ const path = require("path");
 
 const app = express();
 
-/* ================= FIX uploads folder ================= */
-if (!fs.existsSync("uploads")) {
-    fs.mkdirSync("uploads");
+/* ================= FIX uploads ================= */
+const UPLOADS_DIR = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR);
 }
 
 /* ================= MIDDLEWARE ================= */
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(UPLOADS_DIR));
 
-const upload = multer({ dest: "uploads/" });
-
-const ADMIN_PASS = "mbark#7171124";
+const upload = multer({ dest: UPLOADS_DIR });
 
 /* ================= DATA ================= */
 let POSTS = [];
 let MESSAGES = [];
-let USERS = [];
-
-/* ================= BAN SYSTEM ================= */
-let BANNED_USERS = [];
-let USER_ACTIVITY = {};
-
-/* ================= CHECK BAN ================= */
-function isBanned(user){
-    const now = Date.now();
-    const ban = BANNED_USERS.find(b => b.name === user);
-
-    if(!ban) return false;
-
-    if(now > ban.until){
-        BANNED_USERS = BANNED_USERS.filter(b => b.name !== user);
-        return false;
-    }
-
-    return true;
-}
-
-/* ================= SPAM CHECK ================= */
-function checkSpam(user){
-    const now = Date.now();
-
-    if(!USER_ACTIVITY[user]){
-        USER_ACTIVITY[user] = [];
-    }
-
-    USER_ACTIVITY[user] = USER_ACTIVITY[user].filter(t => now - t < 60000);
-    USER_ACTIVITY[user].push(now);
-
-    return USER_ACTIVITY[user].length > 10;
-}
 
 /* ================= HOME ================= */
 app.get("/", (req, res) => {
@@ -62,100 +28,81 @@ app.get("/", (req, res) => {
 });
 
 /* ================= POSTS ================= */
-app.post("/post",(req,res)=>{
+app.post("/post", (req, res) => {
 
-const user = req.body.user;
+const { user, text, file, type } = req.body;
 
-/* empty post */
-if(!req.body.text || req.body.text.trim() === ""){
-    return res.json({ok:false,error:"لا يمكن نشر منشور فارغ"});
+if (!user) {
+    return res.json({ ok: false, error: "اسم المستخدم مطلوب" });
 }
 
-/* ban */
-if(isBanned(user)){
-    return res.json({ok:false,error:"أنت محظور مؤقتًا"});
-}
-
-/* spam */
-if(checkSpam(user)){
-    BANNED_USERS.push({
-        name:user,
-        until: Date.now() + 60*60*1000
-    });
-
-    return res.json({
-        ok:false,
-        error:"تم حظرك لمدة ساعة بسبب الإزعاج"
-    });
+if (!text || text.trim() === "") {
+    return res.json({ ok: false, error: "لا يمكن نشر منشور فارغ" });
 }
 
 POSTS.push({
     id: Date.now(),
     user,
-    text: req.body.text,
-    file: req.body.file,
-    type: req.body.type,
+    text,
+    file: file || null,
+    type: type || null,
     likes: 0,
-    dislikes: 0,
-    likedBy: [],
-    dislikedBy: []
+    dislikes: 0
 });
 
-res.json({ok:true});
+res.json({ ok: true });
 });
 
-app.get("/posts",(req,res)=>{
+app.get("/posts", (req, res) => {
     res.json(POSTS);
 });
 
 /* ================= CHAT ================= */
-app.post("/send",(req,res)=>{
+app.post("/send", (req, res) => {
 
-if(isBanned(req.body.user)){
-    return res.json({ok:false,error:"محظور من الرسائل"});
+const { user, text } = req.body;
+
+if (!user) {
+    return res.json({ ok: false, error: "اسم المستخدم مطلوب" });
 }
 
-if(!req.body.text || req.body.text.trim()===""){
-    return res.json({ok:false,error:"رسالة فارغة"});
+if (!text || text.trim() === "") {
+    return res.json({ ok: false, error: "رسالة فارغة" });
 }
 
 MESSAGES.push({
     id: Date.now(),
-    user: req.body.user,
-    text: req.body.text
+    user,
+    text
 });
 
-if(MESSAGES.length > 5){
-    MESSAGES = MESSAGES.slice(-5);
+if (MESSAGES.length > 20) {
+    MESSAGES = MESSAGES.slice(-20);
 }
 
-res.json({ok:true});
+res.json({ ok: true });
 });
 
-app.get("/messages",(req,res)=>{
+app.get("/messages", (req, res) => {
     res.json(MESSAGES);
 });
 
 /* ================= UPLOAD ================= */
-app.post("/upload", upload.single("file"), (req,res)=>{
+app.post("/upload", upload.single("file"), (req, res) => {
 
-if(!req.file){
-    return res.json({
-        ok:false,
-        error:"لم يتم رفع ملف"
-    });
+if (!req.file) {
+    return res.json({ ok: false, error: "لم يتم رفع ملف" });
 }
 
 res.json({
-    ok:true,
+    ok: true,
     file: req.file.filename,
     type: req.file.mimetype
 });
 
 });
-    
-/* ================= START ================ */
 
+/* ================= START ================= */
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
