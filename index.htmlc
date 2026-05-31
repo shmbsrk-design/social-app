@@ -1,0 +1,510 @@
+<!DOCTYPE html> <html lang="ar">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, 
+initial-scale=1.0">
+
+<title>Palestine Social</title>
+
+<style>
+
+*{ margin:0; padding:0; box-sizing:border-box; 
+font-family:sans-serif;
+}
+
+body{ background:#0d0d0d; color:white;
+}
+
+/* Header */
+
+header{ 
+background:linear-gradient(90deg,#000,#006400,#ce1126); 
+padding:15px; text-align:center; font-size:24px; 
+font-weight:bold; border-bottom:2px solid white;
+}
+
+/* Navigation */
+
+.nav{ display:flex; gap:10px; padding:10px; 
+background:#111; position:sticky; top:0; z-index:999;
+}
+
+.nav button{ flex:1; padding:12px; border:none; 
+border-radius:10px; background:#ce1126; color:white; 
+font-size:16px; font-weight:bold;
+}
+
+/* Pages */
+
+.page{ display:none; padding:10px;
+}
+
+.active{ display:block;
+}
+
+/* Inputs */
+
+.inputBox{ display:flex; flex-direction:column; 
+gap:8px; margin-bottom:15px;
+}
+
+input[type="text"]{ padding:12px; border:none; 
+border-radius:10px; background:#1a1a1a; color:white; 
+font-size:16px;
+}
+
+input[type="file"]{ background:#1a1a1a; padding:10px; 
+border-radius:10px; color:white;
+}
+
+.sendBtn{ padding:12px; border:none; 
+border-radius:10px; background:#00c853; color:black; 
+font-weight:bold; font-size:16px;
+}
+
+/* Cards */
+
+.card{ background:#151515; padding:12px; 
+margin-bottom:14px; border-radius:14px; 
+border-right:4px solid #00c853; box-shadow:0 0 10px 
+rgba(0,0,0,0.4);
+}
+
+/* Username */
+
+.username{ color:#00e676; font-weight:bold; 
+margin-bottom:8px;
+}
+
+/* Text */
+
+.text{ line-height:1.6; word-wrap:break-word;
+}
+
+/* Media */
+
+img,video{ width:100%; margin-top:10px; 
+border-radius:10px; max-height:400px; 
+object-fit:cover; background:black;
+}
+
+/* Buttons */
+
+.actions{ margin-top:10px; display:flex; gap:6px; 
+flex-wrap:wrap;
+}
+
+.actions button{ padding:8px 12px; border:none; 
+border-radius:8px; font-size:14px; font-weight:bold;
+}
+
+.likeBtn{ background:#00c853; color:black;
+}
+
+.dislikeBtn{ background:#ce1126; color:white;
+}
+
+.deleteBtn{ background:#444; color:white;
+}
+
+/* Chat */
+
+.chatCard{ border-right:4px solid #ce1126;
+}
+
+/* Footer */
+
+.footer{ text-align:center; padding:15px; color:#888; 
+font-size:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header> 🇵🇸 Palestine Social </header>
+
+<div class="nav">
+
+<button onclick="showPage('postsPage')"> 📰 المنشورات 
+</button>
+
+<button onclick="showPage('chatPage')"> 💬 الشات 
+</button>
+
+</div>
+
+<!-- POSTS PAGE -->
+
+<div id="postsPage" class="page active">
+
+<div class="inputBox">
+
+<input type="text" id="postText" placeholder="اكتب 
+منشور...">
+
+<input type="file" id="fileInput">
+
+<button class="sendBtn" onclick="addPost()"> نشر 
+المنشور </button>
+
+</div>
+
+<div id="postsList"></div>
+
+</div>
+
+<!-- CHAT PAGE -->
+
+<div id="chatPage" class="page">
+
+<div class="inputBox">
+
+<input type="text" id="msg" placeholder="اكتب 
+رسالة...">
+
+<button class="sendBtn" onclick="sendMessage()"> إرسال 
+</button>
+
+</div>
+
+<div id="chatList"></div>
+
+</div>
+
+<div class="footer"> Palestine Social © </div>
+
+<script>
+
+/* USER */
+
+let user = localStorage.getItem("username");
+
+if(!user){
+
+user = prompt("اكتب اسمك");
+
+localStorage.setItem("username",user);
+
+}
+
+/* PAGE SWITCH */
+
+function showPage(page){
+
+document.querySelectorAll(".page").forEach(p=>{
+
+p.classList.remove("active");
+
+});
+
+document.getElementById(page).classList.add("active");
+
+}
+
+/* ========================= */ /* POSTS */ /* 
+========================= */
+
+async function addPost(){
+
+let text = document.getElementById("postText").value;
+
+let fileInput = document.getElementById("fileInput");
+
+let file = fileInput.files[0];
+
+let uploadedFile = null;
+
+let fileType = null;
+
+/* Upload file */
+
+if(file){
+
+let formData = new FormData();
+
+formData.append("file",file);
+
+let uploadRes = await fetch("/upload",{
+
+method:"POST",
+
+body:formData
+
+});
+
+let uploadData = await uploadRes.json();
+
+uploadedFile = uploadData.file;
+
+fileType = file.type;
+
+}
+
+/* Send post */
+
+await fetch("/post",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+user:user,
+
+text:text,
+
+file:uploadedFile,
+
+fileType:fileType
+
+})
+
+});
+
+/* Clear */
+
+document.getElementById("postText").value="";
+
+document.getElementById("fileInput").value="";
+
+/* Reload */
+
+loadPosts();
+
+}
+
+/* Load posts */
+
+function loadPosts(){
+
+fetch("/posts")
+
+.then(r=>r.json())
+
+.then(data=>{
+
+document.getElementById("postsList").innerHTML = 
+data.reverse().map(p=>`
+
+<div class="card">
+
+<div class="username"> 👤 ${p.user} </div>
+
+<div class="text"> ${p.text} </div>
+
+${ p.file ? ( p.fileType.startsWith("image") ? `<img 
+src="/uploads/${p.file}">`
+:
+`<video controls src="/uploads/${p.file}"></video>` )
+:
+""
+}
+
+<div class="actions">
+
+<button class="likeBtn" onclick="likePost(${p.id})"> ❤️ 
+${p.likes} </button>
+
+<button class="dislikeBtn" 
+onclick="dislikePost(${p.id})"> 👎 ${p.dislikes} 
+</button>
+
+<button class="deleteBtn" 
+onclick="deletePost(${p.id})"> 🗑 حذف </button>
+
+</div>
+
+</div>
+
+`).join("");
+
+});
+
+}
+
+/* Like */
+
+function likePost(id){
+
+fetch("/like",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+id:id,
+
+user:user
+
+})
+
+});
+
+setTimeout(loadPosts,300);
+
+}
+
+/* Dislike */
+
+function dislikePost(id){
+
+fetch("/dislike",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+id:id,
+
+user:user
+
+})
+
+});
+
+setTimeout(loadPosts,300);
+
+}
+
+/* Delete */
+
+function deletePost(id){
+
+let password = prompt("ادخل كلمة السر");
+
+fetch("/delete",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+id:id,
+
+password:password,
+
+user:user
+
+})
+
+});
+
+setTimeout(loadPosts,300);
+
+}
+
+/* ========================= */ /* CHAT */ /* 
+========================= */
+
+function sendMessage(){
+
+let msg = document.getElementById("msg").value;
+
+if(msg.trim()=="") return;
+
+fetch("/send",{
+
+method:"POST",
+
+headers:{ "Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+user:user,
+
+message:msg
+
+})
+
+});
+
+/* Clear */
+
+document.getElementById("msg").value="";
+
+loadChat();
+
+}
+
+/* ENTER SEND */
+
+document.getElementById("msg").addEventListener("keypress",function(e){
+
+if(e.key==="Enter"){
+
+sendMessage();
+
+}
+
+});
+
+/* Load chat */
+
+let lastChat = "";
+
+function loadChat(){
+
+fetch("/messages")
+
+.then(r=>r.json())
+
+.then(data=>{
+
+let html = data.map(m=>`
+
+<div class="card chatCard">
+
+<div class="username"> 👤 ${m.user} </div>
+
+<div class="text"> 💬 ${m.message} </div>
+
+</div>
+
+`).join("");
+
+if(html !== lastChat){
+
+document.getElementById("chatList").innerHTML = html;
+
+lastChat = html;
+
+}
+
+});
+
+}
+
+/* AUTO REFRESH */
+
+setInterval(loadPosts,2000);
+
+setInterval(loadChat,1000);
+
+/* FIRST LOAD */
+
+loadPosts();
+
+loadChat();
+
+</script>
+
+</body>
+
+</html>
