@@ -142,10 +142,11 @@ app.post("/upload", upload.single("file"), (req,res)=>{
         file: req.file.filename,
         type: req.file.mimetype
     });
-});const PORT = process.env.PORT || 3000;
+});
 
 /* ================= START ================= */
 
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
     console.log("🚀 Server running on " + PORT);
