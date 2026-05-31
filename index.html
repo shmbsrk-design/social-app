@@ -1,510 +1,341 @@
-<!DOCTYPE html> <html lang="ar">
-
+<!DOCTYPE html>
+<html lang="ar">
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, 
-initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Palestine Social</title>
 
 <style>
-
-*{ margin:0; padding:0; box-sizing:border-box; 
+body{
+margin:0;
 font-family:sans-serif;
+background:#0a0f14;
+color:white;
 }
 
-body{ background:#0d0d0d; color:white;
+#login{
+position:fixed;
+width:100%;
+height:100%;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#0a0f14;
 }
 
-/* Header */
-
-header{ 
-background:linear-gradient(90deg,#000,#006400,#ce1126); 
-padding:15px; text-align:center; font-size:24px; 
-font-weight:bold; border-bottom:2px solid white;
+.box{
+background:#111827;
+padding:20px;
+border-radius:15px;
+width:80%;
+text-align:center;
+border:1px solid #1f2a38;
 }
 
-/* Navigation */
-
-.nav{ display:flex; gap:10px; padding:10px; 
-background:#111; position:sticky; top:0; z-index:999;
+input{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#1c2733;
+color:white;
 }
 
-.nav button{ flex:1; padding:12px; border:none; 
-border-radius:10px; background:#ce1126; color:white; 
-font-size:16px; font-weight:bold;
+button{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#ce1126;
+color:white;
+font-weight:bold;
+cursor:pointer;
 }
 
-/* Pages */
-
-.page{ display:none; padding:10px;
+header{
+text-align:center;
+padding:15px;
+background:linear-gradient(90deg,#000,#006400,#ce1126);
+font-weight:bold;
 }
 
-.active{ display:block;
+.menu{
+display:flex;
+gap:5px;
+padding:10px;
 }
 
-/* Inputs */
-
-.inputBox{ display:flex; flex-direction:column; 
-gap:8px; margin-bottom:15px;
+.menu button{
+flex:1;
+background:#111827;
+border:1px solid #1f2a38;
 }
 
-input[type="text"]{ padding:12px; border:none; 
-border-radius:10px; background:#1a1a1a; color:white; 
-font-size:16px;
+.card{
+background:#111827;
+margin:10px;
+padding:12px;
+border-radius:12px;
+border-left:4px solid #00c853;
 }
 
-input[type="file"]{ background:#1a1a1a; padding:10px; 
-border-radius:10px; color:white;
+.msg{
+border-left:4px solid #ce1126;
 }
 
-.sendBtn{ padding:12px; border:none; 
-border-radius:10px; background:#00c853; color:black; 
-font-weight:bold; font-size:16px;
+img,video{
+width:100%;
+border-radius:10px;
+margin-top:10px;
 }
 
-/* Cards */
-
-.card{ background:#151515; padding:12px; 
-margin-bottom:14px; border-radius:14px; 
-border-right:4px solid #00c853; box-shadow:0 0 10px 
-rgba(0,0,0,0.4);
+.small{
+padding:6px;
+font-size:12px;
+border-radius:6px;
 }
-
-/* Username */
-
-.username{ color:#00e676; font-weight:bold; 
-margin-bottom:8px;
-}
-
-/* Text */
-
-.text{ line-height:1.6; word-wrap:break-word;
-}
-
-/* Media */
-
-img,video{ width:100%; margin-top:10px; 
-border-radius:10px; max-height:400px; 
-object-fit:cover; background:black;
-}
-
-/* Buttons */
-
-.actions{ margin-top:10px; display:flex; gap:6px; 
-flex-wrap:wrap;
-}
-
-.actions button{ padding:8px 12px; border:none; 
-border-radius:8px; font-size:14px; font-weight:bold;
-}
-
-.likeBtn{ background:#00c853; color:black;
-}
-
-.dislikeBtn{ background:#ce1126; color:white;
-}
-
-.deleteBtn{ background:#444; color:white;
-}
-
-/* Chat */
-
-.chatCard{ border-right:4px solid #ce1126;
-}
-
-/* Footer */
-
-.footer{ text-align:center; padding:15px; color:#888; 
-font-size:14px;
-}
-
 </style>
-
 </head>
 
 <body>
 
-<header> 🇵🇸 Palestine Social </header>
+<!-- LOGIN -->
+<div id="login">
+<div class="box">
+<h2>🇵🇸 Palestine Social</h2>
 
-<div class="nav">
+<input id="name" placeholder="اسمك">
+<button onclick="enter()">دخول</button>
+</div>
+</div>
 
-<button onclick="showPage('postsPage')"> 📰 المنشورات 
-</button>
+<!-- APP -->
+<div id="app" style="display:none">
 
-<button onclick="showPage('chatPage')"> 💬 الشات 
-</button>
+<header>🇵🇸 Palestine Social</header>
+
+<div class="menu">
+<button onclick="show('posts')">المنشورات</button>
+<button onclick="show('chat')">الرسائل</button>
+<button onclick="changeName()">تغيير الاسم</button>
+</div>
+
+<!-- POSTS -->
+<div id="posts">
+
+<input id="text" placeholder="اكتب منشور">
+<input type="file" id="file">
+<button onclick="addPost()">نشر</button>
+
+<div id="list"></div>
 
 </div>
 
-<!-- POSTS PAGE -->
+<!-- CHAT -->
+<div id="chat" style="display:none">
 
-<div id="postsPage" class="page active">
-
-<div class="inputBox">
-
-<input type="text" id="postText" placeholder="اكتب 
-منشور...">
-
-<input type="file" id="fileInput">
-
-<button class="sendBtn" onclick="addPost()"> نشر 
-المنشور </button>
-
-</div>
-
-<div id="postsList"></div>
-
-</div>
-
-<!-- CHAT PAGE -->
-
-<div id="chatPage" class="page">
-
-<div class="inputBox">
-
-<input type="text" id="msg" placeholder="اكتب 
-رسالة...">
-
-<button class="sendBtn" onclick="sendMessage()"> إرسال 
-</button>
-
-</div>
+<input id="msg" placeholder="رسالة">
+<button onclick="send()">إرسال</button>
 
 <div id="chatList"></div>
 
 </div>
 
-<div class="footer"> Palestine Social © </div>
+</div>
 
 <script>
 
-/* USER */
+let user="";
+let lastPostId=0;
+let lastMsgId=0;
 
-let user = localStorage.getItem("username");
+/* دخول */
+function enter(){
+user=document.getElementById("name").value;
+if(!user) return;
 
-if(!user){
+localStorage.setItem("u",user);
 
-user = prompt("اكتب اسمك");
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";
 
-localStorage.setItem("username",user);
-
+init();
 }
 
-/* PAGE SWITCH */
-
-function showPage(page){
-
-document.querySelectorAll(".page").forEach(p=>{
-
-p.classList.remove("active");
-
-});
-
-document.getElementById(page).classList.add("active");
-
+if(localStorage.getItem("u")){
+user=localStorage.getItem("u");
+document.getElementById("login").style.display="none";
+document.getElementById("app").style.display="block";
+init();
 }
 
-/* ========================= */ /* POSTS */ /* 
-========================= */
+/* تغيير الاسم */
+function changeName(){
+let n=prompt("اسم جديد");
+if(n){
+user=n;
+localStorage.setItem("u",n);
+}
+}
+
+/* تنقل */
+function show(x){
+document.getElementById("posts").style.display="none";
+document.getElementById("chat").style.display="none";
+document.getElementById(x).style.display="block";
+}
+
+/* إشعارات */
+if("Notification" in window){
+Notification.requestPermission();
+}
+
+function notify(title,body){
+if(Notification.permission==="granted"){
+new Notification(title,{body});
+}
+}
+
+/* ================= POSTS ================= */
 
 async function addPost(){
 
-let text = document.getElementById("postText").value;
+let text=document.getElementById("text").value;
+let file=document.getElementById("file").files[0];
 
-let fileInput = document.getElementById("fileInput");
+if(!text || text.trim()===""){
+alert("لا يمكن نشر منشور فارغ");
+return;
+}
 
-let file = fileInput.files[0];
-
-let uploadedFile = null;
-
-let fileType = null;
-
-/* Upload file */
+let f=null,t=null;
 
 if(file){
+let fd=new FormData();
+fd.append("file",file);
 
-let formData = new FormData();
+let r=await fetch("/upload",{method:"POST",body:fd});
+let d=await r.json();
 
-formData.append("file",file);
-
-let uploadRes = await fetch("/upload",{
-
-method:"POST",
-
-body:formData
-
-});
-
-let uploadData = await uploadRes.json();
-
-uploadedFile = uploadData.file;
-
-fileType = file.type;
-
+f=d.file;
+t=d.type;
 }
 
-/* Send post */
-
-await fetch("/post",{
-
+let res=await fetch("/post",{
 method:"POST",
-
-headers:{ "Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-user:user,
-
-text:text,
-
-file:uploadedFile,
-
-fileType:fileType
-
-})
-
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({user,text,file:f,type:t})
 });
 
-/* Clear */
+let data=await res.json();
 
-document.getElementById("postText").value="";
+if(!data.ok){
+alert(data.error);
+return;
+}
 
-document.getElementById("fileInput").value="";
-
-/* Reload */
-
+document.getElementById("text").value="";
 loadPosts();
-
 }
 
-/* Load posts */
+/* عرض المنشورات */
+function renderPost(p){
 
-function loadPosts(){
+let div=document.createElement("div");
+div.className="card";
 
-fetch("/posts")
+div.innerHTML=`
+<b>${p.user}</b>
+<p>${p.text||""}</p>
 
-.then(r=>r.json())
-
-.then(data=>{
-
-document.getElementById("postsList").innerHTML = 
-data.reverse().map(p=>`
-
-<div class="card">
-
-<div class="username"> 👤 ${p.user} </div>
-
-<div class="text"> ${p.text} </div>
-
-${ p.file ? ( p.fileType.startsWith("image") ? `<img 
-src="/uploads/${p.file}">`
+${p.file ?
+(p.type && p.type.includes("image") ?
+`<img src="/uploads/${p.file}">`
 :
-`<video controls src="/uploads/${p.file}"></video>` )
-:
-""
+`<video controls src="/uploads/${p.file}"></video>`
+)
+:""
+}
+`;
+
+document.getElementById("list").prepend(div);
 }
 
-<div class="actions">
+async function loadPosts(){
+let d=await fetch("/posts").then(r=>r.json());
 
-<button class="likeBtn" onclick="likePost(${p.id})"> ❤️ 
-${p.likes} </button>
-
-<button class="dislikeBtn" 
-onclick="dislikePost(${p.id})"> 👎 ${p.dislikes} 
-</button>
-
-<button class="deleteBtn" 
-onclick="deletePost(${p.id})"> 🗑 حذف </button>
-
-</div>
-
-</div>
-
-`).join("");
-
-});
-
+if(d.length>0){
+let last=d[d.length-1];
+if(last.id!==lastPostId){
+lastPostId=last.id;
+notify("📰 منشور جديد","تم نشر منشور جديد");
+}
 }
 
-/* Like */
+document.getElementById("list").innerHTML="";
+d.forEach(renderPost);
+}
 
-function likePost(id){
+/* ================= CHAT ================= */
 
-fetch("/like",{
+async function send(){
 
+let m=document.getElementById("msg").value;
+
+if(!m || m.trim()===""){
+alert("لا يمكن إرسال رسالة فارغة");
+return;
+}
+
+let r=await fetch("/send",{
 method:"POST",
-
-headers:{ "Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-id:id,
-
-user:user
-
-})
-
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({user,text:m})
 });
 
-setTimeout(loadPosts,300);
+let d=await r.json();
 
+if(!d.ok){
+alert(d.error);
+return;
 }
-
-/* Dislike */
-
-function dislikePost(id){
-
-fetch("/dislike",{
-
-method:"POST",
-
-headers:{ "Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-id:id,
-
-user:user
-
-})
-
-});
-
-setTimeout(loadPosts,300);
-
-}
-
-/* Delete */
-
-function deletePost(id){
-
-let password = prompt("ادخل كلمة السر");
-
-fetch("/delete",{
-
-method:"POST",
-
-headers:{ "Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-id:id,
-
-password:password,
-
-user:user
-
-})
-
-});
-
-setTimeout(loadPosts,300);
-
-}
-
-/* ========================= */ /* CHAT */ /* 
-========================= */
-
-function sendMessage(){
-
-let msg = document.getElementById("msg").value;
-
-if(msg.trim()=="") return;
-
-fetch("/send",{
-
-method:"POST",
-
-headers:{ "Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-user:user,
-
-message:msg
-
-})
-
-});
-
-/* Clear */
 
 document.getElementById("msg").value="";
-
 loadChat();
-
 }
 
-/* ENTER SEND */
+async function loadChat(){
+let d=await fetch("/messages").then(r=>r.json());
 
-document.getElementById("msg").addEventListener("keypress",function(e){
-
-if(e.key==="Enter"){
-
-sendMessage();
-
+if(d.length>0){
+let last=d[d.length-1];
+if(last.id!==lastMsgId){
+lastMsgId=last.id;
+notify("💬 رسالة جديدة", last.user+": "+last.text);
+}
 }
 
-});
-
-/* Load chat */
-
-let lastChat = "";
-
-function loadChat(){
-
-fetch("/messages")
-
-.then(r=>r.json())
-
-.then(data=>{
-
-let html = data.map(m=>`
-
-<div class="card chatCard">
-
-<div class="username"> 👤 ${m.user} </div>
-
-<div class="text"> 💬 ${m.message} </div>
-
+document.getElementById("chatList").innerHTML =
+d.map(m=>`
+<div class="card msg">
+<b>${m.user}</b><br>
+${m.text}
 </div>
-
 `).join("");
-
-if(html !== lastChat){
-
-document.getElementById("chatList").innerHTML = html;
-
-lastChat = html;
-
 }
 
-});
-
-}
-
-/* AUTO REFRESH */
-
-setInterval(loadPosts,2000);
-
-setInterval(loadChat,1000);
-
-/* FIRST LOAD */
-
+/* INIT */
+function init(){
 loadPosts();
-
 loadChat();
+
+setInterval(loadChat,3000);
+setInterval(loadPosts,5000);
+}
 
 </script>
 
 </body>
-
-</html>
+  </html>
