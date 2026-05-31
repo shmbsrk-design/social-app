@@ -19,10 +19,9 @@ let USERS = [];
 let BANNED_USERS = [];
 let USER_ACTIVITY = {};
 
-/* ================= CHECK BAN ================= */
+/* ================= HELPERS ================= */
 function isBanned(user){
     const now = Date.now();
-
     const ban = BANNED_USERS.find(b => b.name === user);
 
     if(!ban) return false;
@@ -35,9 +34,7 @@ function isBanned(user){
     return true;
 }
 
-/* ================= SPAM CHECK ================= */
 function checkSpam(user){
-
     const now = Date.now();
 
     if(!USER_ACTIVITY[user]){
@@ -50,44 +47,9 @@ function checkSpam(user){
     return USER_ACTIVITY[user].length > 10;
 }
 
-/* ================= LINK ================= */
-let currentLink = "https://your-link.trycloudflare.com";
-
-app.get("/link",(req,res)=>{
-    return res.redirect(currentLink);
-});
-
-app.get("/set-link",(req,res)=>{
-    if(req.query.url){
-        currentLink = req.query.url;
-        return res.json({ok:true,newLink:currentLink});
-    }
-    res.json({ok:false});
-});
-
 /* ================= HOME ================= */
-app.get("/",(req,res)=>{
+app.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html");
-});
-
-/* ================= USERS ================= */
-app.post("/login",(req,res)=>{
-    if(!USERS.includes(req.body.user)){
-        USERS.push(req.body.user);
-    }
-    res.json({ok:true});
-});
-
-app.get("/users",(req,res)=>{
-    res.json(USERS);
-});
-
-/* ================= UPLOAD ================= */
-app.post("/upload", upload.single("file"), (req,res)=>{
-    res.json({
-        file:req.file.filename,
-        type:req.file.mimetype
-    });
 });
 
 /* ================= POSTS ================= */
@@ -95,28 +57,24 @@ app.post("/post",(req,res)=>{
 
 const user = req.body.user;
 
-/* empty post */
 if(!req.body.text || req.body.text.trim() === ""){
     return res.json({ok:false,error:"لا يمكن نشر منشور فارغ"});
 }
 
-/* ban check */
 if(isBanned(user)){
     return res.json({ok:false,error:"أنت محظور مؤقتًا"});
 }
 
-/* spam check */
 if(checkSpam(user)){
+    BANNED_USERS.push({
+        name:user,
+        until: Date.now() + 60*60*1000
+    });
 
-BANNED_USERS.push({
-    name:user,
-    until: Date.now() + 60*60*1000
-});
-
-return res.json({
-    ok:false,
-    error:"تم حظرك لمدة ساعة بسبب الإزعاج"
-});
+    return res.json({
+        ok:false,
+        error:"تم حظرك لمدة ساعة بسبب الإزعاج"
+    });
 }
 
 POSTS.push({
@@ -138,56 +96,15 @@ app.get("/posts",(req,res)=>{
     res.json(POSTS);
 });
 
-/* ================= LIKE ================= */
-app.post("/like",(req,res)=>{
-    let p = POSTS.find(x=>x.id==req.body.id);
-    if(!p) return res.json({error:true});
-
-    if(p.likedBy.includes(req.body.user)) return;
-
-    p.likes++;
-    p.likedBy.push(req.body.user);
-
-    res.json({ok:true});
-});
-
-/* ================= DISLIKE ================= */
-app.post("/dislike",(req,res)=>{
-    let p = POSTS.find(x=>x.id==req.body.id);
-    if(!p) return;
-
-    if(p.dislikedBy.includes(req.body.user)) return;
-
-    p.dislikes++;
-    p.dislikedBy.push(req.body.user);
-
-    res.json({ok:true});
-});
-
-/* ================= DELETE ================= */
-app.post("/delete",(req,res)=>{
-
-const i = POSTS.findIndex(p=>p.id==req.body.id);
-
-if(i === -1){
-    return res.json({ok:false,error:"Post not found"});
-}
-
-if(req.body.pass !== ADMIN_PASS){
-    return res.json({ok:false,error:"Wrong password"});
-}
-
-POSTS.splice(i,1);
-
-res.json({ok:true});
-
-});
-
 /* ================= CHAT ================= */
 app.post("/send",(req,res)=>{
 
 if(isBanned(req.body.user)){
     return res.json({ok:false,error:"محظور من الرسائل"});
+}
+
+if(!req.body.text || req.body.text.trim()===""){
+    return res.json({ok:false,error:"رسالة فارغة"});
 }
 
 MESSAGES.push({
@@ -207,7 +124,17 @@ app.get("/messages",(req,res)=>{
     res.json(MESSAGES);
 });
 
+/* ================= UPLOAD ================= */
+app.post("/upload", upload.single("file"), (req,res)=>{
+    res.json({
+        file:req.file.filename,
+        type:req.file.mimetype
+    });
+});
+
 /* ================= START ================= */
-app.listen(process.env.PORT || 3000,()=>{
-    console.log("🚀 Server running");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log("🚀 Server running on port " + PORT);
 });
