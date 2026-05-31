@@ -3,310 +3,169 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Palestine Social</title>
+<title>Palestine Social PRO</title>
 
 <style>
-body{
-margin:0;
-font-family:sans-serif;
-background:#0a0f14;
-color:white;
-}
-
-#login{
-position:fixed;
-width:100%;
-height:100%;
-display:flex;
-justify-content:center;
-align-items:center;
-background:#0a0f14;
-}
-
-.box{
-background:#111827;
-padding:20px;
-border-radius:15px;
-width:80%;
-text-align:center;
-border:1px solid #1f2a38;
-}
-
-input{
-width:100%;
-padding:12px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-background:#1c2733;
-color:white;
-}
-
-button{
-width:100%;
-padding:12px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-background:#ce1126;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
-header{
-text-align:center;
-padding:15px;
-background:linear-gradient(90deg,#000,#006400,#ce1126);
-font-weight:bold;
-}
-
-.menu{
-display:flex;
-gap:5px;
-padding:10px;
-}
-
-.menu button{
-flex:1;
-background:#111827;
-border:1px solid #1f2a38;
-color:white;
-}
-
-.card{
-background:#111827;
-margin:10px;
-padding:12px;
-border-radius:12px;
-border-left:4px solid #00c853;
-}
-
-.msg{
-border-left:4px solid #ce1126;
-}
-
-img,video{
-width:100%;
-border-radius:10px;
-margin-top:10px;
-}
-
-.small{
-padding:6px;
-font-size:12px;
-border-radius:6px;
-}
+body{margin:0;font-family:sans-serif;background:#0a0f14;color:white}
+header{padding:15px;text-align:center;background:#111}
+.card{background:#111827;margin:10px;padding:10px;border-radius:10px}
+button{padding:6px;margin:3px}
+.online{color:#00ff99}
+input{padding:10px;margin:5px;width:90%}
 </style>
 </head>
 
 <body>
 
-<div id="login">
-<div class="box">
-<h2>🇵🇸 Palestine Social</h2>
-<input id="name" placeholder="اسمك">
-<button onclick="enter()">دخول</button>
-</div>
-</div>
+<header>
+🇵🇸 Palestine Social PRO
+<div id="online"></div>
+</header>
 
-<div id="app" style="display:none">
-
-<header>🇵🇸 Palestine Social</header>
-
-<div class="menu">
-<button onclick="show('posts')">المنشورات</button>
-<button onclick="show('chat')">الرسائل</button>
-<button onclick="changeName()">تغيير الاسم</button>
-</div>
-
-<div id="posts">
 <input id="text" placeholder="اكتب منشور">
 <input type="file" id="file">
-<button onclick="addPost()">نشر</button>
+<button onclick="post()">نشر</button>
+
 <div id="list"></div>
-</div>
-
-<div id="chat" style="display:none">
-<input id="msg" placeholder="رسالة">
-<button onclick="send()">إرسال</button>
-<div id="chatList"></div>
-</div>
-
-</div>
 
 <script>
 
-let user="";
+let user = prompt("اسمك");
+let lastPost = 0;
 
-/* دخول */
-function enter(){
-user=document.getElementById("name").value;
-if(!user) return;
+/* ONLINE */
+setInterval(()=>{
+fetch("/online",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({user})
+});
 
-localStorage.setItem("u",user);
-
-document.getElementById("login").style.display="none";
-document.getElementById("app").style.display="block";
-
-init();
-}
-
-if(localStorage.getItem("u")){
-user=localStorage.getItem("u");
-document.getElementById("login").style.display="none";
-document.getElementById("app").style.display="block";
-init();
-}
-
-/* تغيير الاسم */
-function changeName(){
-let n=prompt("اسم جديد");
-if(n){
-user=n;
-localStorage.setItem("u",n);
-}
-}
-
-/* تنقل */
-function show(x){
-document.getElementById("posts").style.display="none";
-document.getElementById("chat").style.display="none";
-document.getElementById(x).style.display="block";
-}
-
-/* إشعارات */
-if("Notification" in window){
-Notification.requestPermission();
-}
-
-function notify(title,body){
-if(Notification.permission==="granted"){
-new Notification(title,{body});
-}
-}
+fetch("/online")
+.then(r=>r.json())
+.then(d=>{
+document.getElementById("online").innerHTML =
+"🟢 Online: " + d.join(", ");
+});
+},3000);
 
 /* ================= POSTS ================= */
 
-async function addPost(){
+function post(){
 
-let text=document.getElementById("text").value;
-let file=document.getElementById("file").files[0];
+let text = document.getElementById("text");
+let file = document.getElementById("file");
 
-/* مهم: منع الفارغ هنا فقط (والسيرفر كمان يحمي) */
-if(!text && !file){
-alert("لا يمكن نشر منشور فارغ");
-return;
-}
+let formText = text.value;
+let formFile = file.files[0];
 
 let f=null,t=null;
 
-if(file){
-let fd=new FormData();
-fd.append("file",file);
+/* رفع الملف إذا موجود */
+if(formFile){
+let fd = new FormData();
+fd.append("file",formFile);
 
-let r=await fetch("/upload",{method:"POST",body:fd});
-let d=await r.json();
-
+fetch("/upload",{method:"POST",body:fd})
+.then(r=>r.json())
+.then(d=>{
 f=d.file;
 t=d.type;
+
+sendPost(formText,f,t);
+});
+}else{
+sendPost(formText,null,null);
+}
 }
 
-let res=await fetch("/post",{
+/* إرسال المنشور */
+function sendPost(text,file,type){
+
+fetch("/post",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({user,text,file:f,type:t})
+body:JSON.stringify({user,text,file,type})
+}).then(()=>{
+
+/* ✨ تصفير الحقول بعد النشر */
+document.getElementById("text").value = "";
+document.getElementById("file").value = "";
+
+load();
+
 });
-
-let data=await res.json();
-
-if(!data.ok){
-alert(data.error);
-return;
 }
 
-document.getElementById("text").value="";
-loadPosts();
-}
+/* ================= LOAD POSTS ================= */
 
-/* عرض المنشورات */
-function renderPost(p){
+function load(){
+
+fetch("/posts")
+.then(r=>r.json())
+.then(d=>{
+
+document.getElementById("list").innerHTML="";
+
+d.forEach(p=>{
 
 let div=document.createElement("div");
 div.className="card";
 
 div.innerHTML=`
-<b>${p.user}</b>
-<p>${p.text||""}</p>
+<b>${p.user}</b><br>
+${p.text||""}<br>
 
 ${p.file ?
 (p.type && p.type.includes("image") ?
-`<img src="/uploads/${p.file}">`
+`<img src="/uploads/${p.file}" style="width:100%">`
 :
-`<video controls src="/uploads/${p.file}"></video>`
+`<video controls src="/uploads/${p.file}" style="width:100%"></video>`
 )
 :""
 }
+
+<br>
+
+<button onclick="like(${p.id})">👍 ${p.likes}</button>
+<button onclick="dislike(${p.id})">👎 ${p.dislikes}</button>
+<button onclick="del(${p.id})">🗑 حذف</button>
 `;
 
 document.getElementById("list").prepend(div);
-}
 
-async function loadPosts(){
-let d=await fetch("/posts").then(r=>r.json());
-document.getElementById("list").innerHTML="";
-d.forEach(renderPost);
-}
-
-/* ================= CHAT ================= */
-
-async function send(){
-
-let m=document.getElementById("msg").value;
-
-if(!m){
-alert("رسالة فارغة");
-return;
-}
-
-let r=await fetch("/send",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({user,text:m})
 });
-
-let d=await r.json();
-
-if(!d.ok){
-alert(d.error);
-return;
+});
 }
 
-document.getElementById("msg").value="";
-loadChat();
+/* ================= ACTIONS ================= */
+
+function like(id){
+fetch("/like",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,user})})
+.then(load);
 }
 
-async function loadChat(){
-let d=await fetch("/messages").then(r=>r.json());
+function dislike(id){
+fetch("/dislike",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,user})})
+.then(load);
+}
 
-document.getElementById("chatList").innerHTML =
-d.map(m=>`
-<div class="card msg">
-<b>${m.user}</b><br>
-${m.text}
-</div>
-`).join("");
+function del(id){
+let pass = prompt("كلمة السر");
+fetch("/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,pass})})
+.then(load);
 }
 
 /* INIT */
-function init(){
-loadPosts();
-loadChat();
-setInterval(loadChat,3000);
-setInterval(loadPosts,5000);
+load();
+setInterval(load,3000);
+
+/* NOTIFICATIONS */
+if("Notification" in window){
+Notification.requestPermission();
 }
 
 </script>
 
 </body>
-  </html>
+</html>
