@@ -138,13 +138,23 @@ app.get("/messages",(req,res)=>{
 
 /* ================= UPLOAD ================= */
 app.post("/upload", upload.single("file"), (req,res)=>{
-    res.json({
-        file: req.file.filename,
-        type: req.file.mimetype
+
+if(!req.file){
+    return res.json({
+        ok:false,
+        error:"لم يتم رفع ملف"
     });
+}
+
+res.json({
+    ok:true,
+    file: req.file.filename,
+    type: req.file.mimetype
 });
 
-/* ================= START ================= */
+});
+    
+/* ================= START ================ */
 
 const PORT = process.env.PORT || 3000;
 
