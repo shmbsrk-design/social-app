@@ -1,10 +1,18 @@
 const express = require("express");
 const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
+/* ================= FIX uploads folder ================= */
+if (!fs.existsSync("uploads")) {
+    fs.mkdirSync("uploads");
+}
+
+/* ================= MIDDLEWARE ================= */
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const upload = multer({ dest: "uploads/" });
 
@@ -19,7 +27,7 @@ let USERS = [];
 let BANNED_USERS = [];
 let USER_ACTIVITY = {};
 
-/* ================= HELPERS ================= */
+/* ================= CHECK BAN ================= */
 function isBanned(user){
     const now = Date.now();
     const ban = BANNED_USERS.find(b => b.name === user);
@@ -34,6 +42,7 @@ function isBanned(user){
     return true;
 }
 
+/* ================= SPAM CHECK ================= */
 function checkSpam(user){
     const now = Date.now();
 
@@ -49,7 +58,7 @@ function checkSpam(user){
 
 /* ================= HOME ================= */
 app.get("/", (req, res) => {
-    res.sendFile(__dirname + "/index.html");
+    res.sendFile(path.join(__dirname, "index.html"));
 });
 
 /* ================= POSTS ================= */
@@ -57,14 +66,17 @@ app.post("/post",(req,res)=>{
 
 const user = req.body.user;
 
+/* empty post */
 if(!req.body.text || req.body.text.trim() === ""){
     return res.json({ok:false,error:"لا يمكن نشر منشور فارغ"});
 }
 
+/* ban */
 if(isBanned(user)){
     return res.json({ok:false,error:"أنت محظور مؤقتًا"});
 }
 
+/* spam */
 if(checkSpam(user)){
     BANNED_USERS.push({
         name:user,
@@ -127,14 +139,14 @@ app.get("/messages",(req,res)=>{
 /* ================= UPLOAD ================= */
 app.post("/upload", upload.single("file"), (req,res)=>{
     res.json({
-        file:req.file.filename,
-        type:req.file.mimetype
+        file: req.file.filename,
+        type: req.file.mimetype
     });
 });
 
 /* ================= START ================= */
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-    console.log("🚀 Server running on port " + PORT);
+    console.log("🚀 Server running on " + PORT);
 });
