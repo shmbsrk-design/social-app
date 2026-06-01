@@ -21,8 +21,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // إنشاء مجلد الرفع تلقائياً
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
+try {
+  fs.mkdirSync("uploads", { recursive: true });
+} catch (err) {
+  console.log(err);
 }
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
