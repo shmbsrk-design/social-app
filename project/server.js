@@ -20,11 +20,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// إنشاء مجلد الرفع تلقائياً
-try {
-  fs.mkdirSync("uploads", { recursive: true });
-} catch (err) {
-  console.log(err);
+// إنشاء مجلد الرفع تلقائياً//
+const fs = require('fs');
+
+if (!fs.existsSync('/app/uploads')) {
+  fs.mkdirSync('/app/uploads');
 }
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
